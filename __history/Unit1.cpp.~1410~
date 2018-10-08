@@ -1,0 +1,1096 @@
+//---------------------------------------------------------------------------
+
+#include <fmx.h>
+#pragma hdrstop
+
+#include "Unit1.h"
+//---------------------------------------------------------------------------
+#pragma package(smart_init)
+#pragma resource "*.fmx"
+#pragma resource ("*.LgXhdpiTb.fmx", _PLAT_ANDROID)
+#define SENDSIZE 1
+TForm1 *Form1;
+TImage* block[100];
+TLabel* label[100];
+TLine* lines[30];
+bool lineselect[30];
+String id="";
+int i=0,No,l=0;
+String indented="",indentbasis=" ";
+int totalsize,receivesize,buffersize;
+AnsiString str_data,str_filename,str_buf,str_savefilename;
+String path;
+bool ifexist = false;
+int linetag=-1;
+
+int clcounts=0,allcount=0,endcount=0;
+//---------------------------------------------------------------------------
+__fastcall TForm1::TForm1(TComponent* Owner)
+	: TForm(Owner)
+{
+}
+int TForm1::Scan(String sample,String compare)
+{
+	int length = sample.Length(),s=0;
+	String compare2;
+	for(int counter = 1;counter<=length;counter++)
+	{
+		compare2 = sample.SubString(counter,1);
+		if(compare2 == compare)
+		{
+			s++;
+		}
+	}
+	return s;
+}
+String TForm1::indent(int blocknumber)
+{
+	indented="";
+	int ifs=0,elses=0,s=0,elseifs=0,ends=0,fors=0;
+	if(blocknumber == 0)
+	{
+		return "";
+	}
+	else
+	{
+		for(int count=0;count<=blocknumber-1;count++)
+		{
+			if((block[count]->Tag)/100>=4 && (block[count]->Tag/100)<5)
+			{
+				ifs++;
+			}
+			else if((block[count]->Tag/100)>=6 && (block[count]->Tag/100)<7)
+			{
+                fors++;
+            }
+			else if((block[count]->Tag/100)>=9 && (block[count]->Tag/100)<10)
+			{
+				ends++;
+			}
+			else if((block[count]->Tag/100)>=7 && (block[count]->Tag/100)<8)
+			{
+				elseifs++;
+			}
+			else if((block[count]->Tag/100)>=8 && (block[count]->Tag/100)<9)
+			{
+				elses++;
+			}
+		}
+	}
+	if((block[blocknumber]->Tag/100)>=9 && (block[blocknumber]->Tag/100)<10)
+	{
+		for(int l=1;l<=4*(abs(ifs+elseifs+elses+fors-ends-1));l++)
+		{
+			indented = indented + indentbasis;
+		}
+	}
+	else
+	{
+		for(int l=1;l<=4*(abs(ifs+elseifs+elses+fors-ends));l++)
+		{
+			indented = indented + indentbasis;
+		}
+	}
+	return indented;
+}
+void TForm1::Reset()
+{
+	Apply->Visible = false;
+	Delete->Visible = false;
+	Edit1->Visible = false;
+	Button2->Visible = false;
+	Label12->Visible=false;
+	Label14->Visible=false;
+	Label12->Parent=Apply;
+	Label14->Parent=Delete;
+}
+//---------------------------------------------------------------------------
+void TForm1::ShapeCreate(int type)
+{
+	block[i] = new TImage(this);
+	block[i]->Parent = ScrollBox1;
+	block[i]->Size->Width = 120;
+	block[i]->Size->Height = 49;
+	block[i]->Visible = true;
+	block[i]->OnMouseDown = BlockMouseDown;
+	block[i]->Tag = i+(100 * type);
+	block[i]->Position->X = 30;
+	block[i]->Position->Y = 30 + i*(Example1->Height+30);
+	block[i]->WrapMode = trash2->WrapMode;
+
+
+	label[i] = new TLabel(this);
+	label[i]->Parent = block[i];
+	label[i]->Tag = block[i]->Tag;
+	label[i]->WordWrap = true;
+
+	line->Position->X = block[0]->Position->X + block[0]->Size->Width/2;
+	line->Position->Y = block[0]->Position->Y;
+	line->Size->Width = 1;
+
+	if(i>=1)
+	{
+		line->Size->Height = block[i]->Position->Y - block[0]->Position->Y;
+		block[i]->Position->X = block[i-1]->Position->X;
+		block[i]->Position->Y = block[i-1]->Position->Y + block[i-1]->Height + 30;
+	}
+
+	if(type==1)
+	{
+		block[i]->MultiResBitmap->Items[0]->Bitmap->LoadFromFile("image//선언.png");
+	}
+	else if(type==2)
+	{
+		block[i]->MultiResBitmap->Items[0]->Bitmap->LoadFromFile("image//입력.png");
+	}
+	else if(type==3)
+	{
+		block[i]->MultiResBitmap->Items[0]->Bitmap->LoadFromFile("image//처리.png");
+	}
+	else if(type==4)
+	{
+		block[i]->MultiResBitmap->Items[0]->Bitmap->LoadFromFile("image//조건.png");
+		clcounts++;
+	}
+	else if(type==5)
+	{
+		block[i]->MultiResBitmap->Items[0]->Bitmap->LoadFromFile("image//출력.png");
+	}
+	else if(type==6)
+	{
+		block[i]->MultiResBitmap->Items[0]->Bitmap->LoadFromFile("image//반복.png");
+		clcounts++;
+	}
+	else if(type==7)
+	{
+		block[i]->MultiResBitmap->Items[0]->Bitmap->LoadFromFile("image//조건-elseif.png");
+		/*
+		for(int m=i-1;m>=0;m--)
+		{
+			if(block[m]->Tag/100 >=4 && block[m]->Tag/100 <5)
+			{
+				block[i]->Position->X  = block[m]->Position->X + block[m]->Width + 100;
+				block[i]->Position->Y = block[m]->Position->Y;
+			}
+		}
+		*/
+		clcounts++;
+	}
+	else if(type==8)
+	{
+		block[i]->MultiResBitmap->Items[0]->Bitmap->LoadFromFile("image//조건-else.png");
+		clcounts++;
+	}
+	else if(type==9)
+	{
+		block[i]->MultiResBitmap->Items[0]->Bitmap->LoadFromFile("image//조건 반복 끝내기.png");
+		clcounts--;
+	}
+	i++;
+	ListBox1->Items->Add(type);
+}
+void __fastcall TForm1::BlockMouseDown(TObject *Sender, TMouseButton Button, TShiftState Shift, float X, float Y)
+{
+	int tag;
+	Reset();
+	tag=dynamic_cast<TImage*>(Sender)->Tag;
+	No = tag%100;
+
+	if(Button == TMouseButton::mbRight)
+	{
+		Apply->Position->X = block[No]->Position->X + block[No]->Size->Width+10;
+		Apply->Position->Y = block[No]->Position->Y;
+		Delete->Position->X = block[No]->Position->X + block[No]->Size->Width+20+Apply->Width;
+		Delete->Position->Y = block[No]->Position->Y;
+		Label12->Position->X = block[No]->Position->X + block[No]->Size->Width+10;
+		Label12->Position->Y = block[No]->Position->Y;
+		Label14->Position->X = block[No]->Position->X + block[No]->Size->Width+20+Apply->Width;
+		Label14->Position->Y = block[No]->Position->Y;
+		Apply->Visible = true;
+		Delete->Visible = true;
+		Label12->Visible=true;
+		Label14->Visible=true;
+		Label12->Align=11;
+		Label14->Align=11;
+	}
+}
+void __fastcall TForm1::LineMouseDown(TObject *Sender, TMouseButton Button, TShiftState Shift, float X, float Y)
+{
+	linetag = dynamic_cast<TLine*>(Sender)->Tag;
+	if(lineselect[linetag] == true)
+	{
+        lineselect[linetag] = false;
+	}
+	else
+	{
+		lineselect[linetag] = true;
+	}
+}
+
+void __fastcall TForm1::ApplyClick(TObject *Sender)
+{
+	//ShowMessage("Hi");
+	Edit1->Text = "";
+	Edit1->Visible = true;
+	//Button2->Position->X = ScrollBox1->Width - Button2->Size->Width - 16;
+	//Button2->Position->Y=8;
+	Edit1->Position->X = block[No]->Position->X + block[No]->Width + 8;
+	Edit1->Position->Y = block[No]->Position->Y+(block[No]->Height - Edit1->Height)/2;
+	Button2->Position->X = Edit1->Position->X + Edit1->Width;
+	Button2->Position->Y = Edit1->Position->Y;
+	Button2->Visible=true;
+
+}
+//---------------------------------------------------------------------------
+void __fastcall TForm1::DeleteClick(TObject *Sender)
+{
+
+	int a=No;
+	//for(No;No<=i-1;No++)
+	//{
+	int type = block[No]->Tag / 100;
+	if(type == 4 || type == 6 || type==7||type==8){
+			clcounts--;
+		}
+		else if(type == 9){
+			clcounts++;
+		}
+	delete block[No];
+	ListBox1->Items->Delete(No);
+	i--;
+	for(int x = No+1; x <= i+1; x++){
+		if(x-1 >= 0){
+		block[x-1] = block[x];
+		label[x-1] = label[x];
+		}else{break;}
+	}
+	//delete block[i-1];
+	//}
+	for(int temp = No; temp< i; temp++){
+		if(temp >= 0){
+		int type = block[temp]->Tag / 100;
+		block[temp]->Tag = type*100 + temp;
+		block[temp]->Position->X = 30;
+	block[temp]->Position->Y = 30 + temp*(Example1->Height+30);
+		}else{break;}
+	}
+	if(i != 0){
+	line->Height = abs(block[0]->Position->Y - block[i-1]->Position->Y);
+	}else{
+        line->Height=0;
+	}
+	Reset();
+}
+//---------------------------------------------------------------------------
+void __fastcall TForm1::Button2Click(TObject *Sender)
+{
+	ListBox1->ItemByIndex(No)->Text = ListBox1->ItemByIndex(No)->Text.Delete(ListBox1->ItemByIndex(No)->Text.Pos(","),ListBox1->ItemByIndex(No)->Text.Length()-ListBox1->ItemByIndex(No)->Text.Pos(",")+1);
+	ListBox1->ItemByIndex(No)->Text = ListBox1->ItemByIndex(No)->Text + "," + Edit1->Text;
+	label[No]->Text = Edit1->Text;
+	label[No]->Align = 11;//trash->Align;
+	label[No]->Width = label[No]->Canvas->TextWidth(label[No]->Text);
+	/*
+	label[No]->WordWrap = true;
+	label[No]->Width = 10*(label[No]->Text.Length());
+	label[No]->Position->X = (block[No]->Width - label[No]->Width)/2;
+	label[No]->Position->Y = (block[No]->Height - label[No]->Height)/2;
+	/*
+	TSelection* selection = new TSelection(this);
+	selection->Parent = block[No];
+	selection->Position->X = label[No]->Position->X;
+	selection->Position->Y = label[No]->Position->Y;
+	selection->Size->Width = label[No]->Size->Width;
+    */
+	Reset();
+}
+//---------------------------------------------------------------------------
+void __fastcall TForm1::Button1Click(TObject *Sender)
+{
+	Memo1->Lines->Clear();
+	Memo1->Lines->Add("#include <iostream.h>\nint main(){");
+	float type;
+	AnsiString command;
+	int s;
+	for(int n=0;n<=i-1;n++)
+	{
+		command = label[n]->Text;
+		s=Scan(command,",");
+		type = (block[n]->Tag)/100;
+		if(type>=1 && type<2)
+		{
+			//String countertype[5] = {"int","char","char*","double","float"};
+			if(s>0)
+			{
+				AnsiString counters[5];
+				for(int o=0;o<=s;o++)
+				{
+					/*
+					counters[o] = command.SubString(1,command.Pos(",")-1);
+					command = command.Delete(1,command.Pos(","));
+					Memo1->Lines->Add(counters[o]+";");
+					*/
+
+					counters[o] = (command.SubString(1,command.Pos(")")-1)).Delete(command.Pos("("),1);
+					command = command.Delete(1,command.Pos(")")+1);
+					if(counters[o] != "")
+					{
+						Memo1->Lines->Add("\t"+indent(n)+counters[o]+";");
+                    }
+				}
+				command = "";
+				//Memo1->Lines->Add(command+";");
+			}
+			else
+			{
+				Memo1->Lines->Add("\t"+indent(n)+command+";");
+			}
+		}
+		else if(type>=2 && type<3)
+		{
+			AnsiString compile;
+			compile = "cin>>";
+			if(s>0)
+			{
+				AnsiString cin[10];
+				for(int o=0;o<=s-1;o++)
+				{
+					cin[o] = command.SubString(1,command.Pos(",")-1);
+					command = command.Delete(1,command.Pos(","));
+					compile = compile+cin[o]+">>";
+				}
+				compile = compile + command + ";";
+				Memo1->Lines->Add("\t"+indent(n)+compile);
+			}
+			else
+			{
+				compile = compile + command+";";
+				Memo1->Lines->Add("\t"+indent(n)+compile);
+			}
+		}
+		else if(type>=3 && type<4)
+		{
+			if(s>0)
+			{
+				AnsiString ttype[10];
+				for(int o=0;o<=s-1;o++)
+				{
+					ttype[o] = command.SubString(1,command.Pos(",")-1);
+					command = command.Delete(1,command.Pos(","));
+					Memo1->Lines->Add(indent(n)+ttype[o]+";");
+				}
+				Memo1->Lines->Add("\t"+indent(n)+command+";");
+			}
+			else
+			{
+				Memo1->Lines->Add("\t"+indent(n)+command+";");
+			}
+		}
+		else if(type>=4 && type<5)
+		{
+			AnsiString compile;
+			//compile = "if("+ command +")\n"+indent(n)+"{";
+            compile = "if("+ command +")\n"+indent(n)+"\t{";
+			Memo1->Lines->Add("\t"+indent(n)+compile);
+		}
+		else if(type>=5 && type<6)
+		{
+			AnsiString compile;
+			compile = "cout<<";
+			if(s>0)
+			{
+				AnsiString cin[10];
+				for(int o=0;o<=s-1;o++)
+				{
+					cin[o] = command.SubString(1,command.Pos(",")-1);
+					command = command.Delete(1,command.Pos(","));
+					compile = compile+cin[o]+"<<";
+				}
+				compile = compile + command;
+				if(compile.LastDelimiter("\"\\n\"") != compile.Length() - 4){
+				Memo1->Lines->Add("\t"+indent(n)+compile+"<<\"\\n\";");
+				}else{
+					Memo1->Lines->Add("\t"+indent(n)+compile+";");
+				}
+			}
+			else
+			{
+				compile = compile + command;
+				if(compile.LastDelimiter("\"\\n\"") != compile.Length() - 4){
+				Memo1->Lines->Add("\t"+indent(n)+compile+"<<\"\\n\";");
+				}else{
+					Memo1->Lines->Add("\t"+indent(n)+compile+";");
+				}
+			}
+		}
+		else if(type>=6 && type<7)
+		{
+			AnsiString compile;
+			if(s>0)
+			{
+				AnsiString loopoption[3];
+				for(int o=0;o<=1;o++)
+				{
+					loopoption[o] = command.SubString(1,command.Pos(",")-1);
+					command = command.Delete(1,command.Pos(","));
+				}
+				loopoption[2] = command;
+				compile = "for(" + loopoption[0] + ";" + loopoption[1] + ";" + loopoption[2] + ")"+"\n"+indent(n)+"{";
+				Memo1->Lines->Add("\t"+indent(n)+compile);
+			}
+		}
+		else if(type>=9 && type<10)
+		{
+			Memo1->Lines->Add("\t"+indent(n)+"}");
+			//Memo1->Lines->Add("\t"+indent(n)+"}");
+		}
+		else if(type>=7 && type<8)
+		{
+			Memo1->Lines->Add("\t"+indent(n)+"else if("+command+")\n"+indent(n)+"{");
+		}
+		else if(type>=8 && type<9)
+		{
+			Memo1->Lines->Add("\t"+indent(n)+"else\n"+indent(n)+"{");
+		}
+	}
+	Memo1->Lines->Add("}");
+}
+//---------------------------------------------------------------------------
+void __fastcall TForm1::FormResize(TObject *Sender)
+{
+	ScrollBox1->Width = Form1->Width - Memo1->Width-13;
+	Button7->Position->X = Form1->Width-220;
+	Button9->Position->X = Form1->Width-110;
+	Panel2->Position->X = Form1->Width-220;
+}
+//---------------------------------------------------------------------------
+void __fastcall TForm1::FormShow(TObject *Sender)
+{
+	Reset();
+}
+//---------------------------------------------------------------------------
+void __fastcall TForm1::Example1Click(TObject *Sender)
+{
+    ShapeCreate(1);
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::Example2Click(TObject *Sender)
+{
+	ShapeCreate(2);
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::Example3Click(TObject *Sender)
+{
+    ShapeCreate(3);
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::Example4Click(TObject *Sender)
+{
+    ShapeCreate(4);
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::Example5Click(TObject *Sender)
+{
+	ShapeCreate(5);
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::Example6Click(TObject *Sender)
+{
+	ShapeCreate(6);
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::Example7Click(TObject *Sender)
+{
+	for(int m=0;m<=i-1;m++)
+	{
+		if(block[m]->Tag/100 >=4 && block[m]->Tag/100 <5)
+		{
+            ifexist = true;
+        }
+    }
+	if(ifexist)
+	{
+		ShapeCreate(7);
+	}
+	else
+	{
+        ShowMessage("if블럭이 없습니다.");
+    }
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::Example8Click(TObject *Sender)
+{
+    for(int m=0;m<=i-1;m++)
+	{
+		if(block[m]->Tag/100 >=4 && block[m]->Tag/100 <5)
+		{
+            ifexist = true;
+        }
+    }
+	if(ifexist)
+	{
+		ShapeCreate(8);
+	}
+	else
+	{
+        ShowMessage("if블럭이 없습니다.");
+    }
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::Example9Click(TObject *Sender)
+{
+	if(clcounts == 0)
+	{
+		ShowMessage("END를 쓸 필요가 없습니다!");
+	}
+	else
+	{
+		ShapeCreate(9);
+	}
+}
+//---------------------------------------------------------------------------
+void __fastcall TForm1::SpeedButton1Click(TObject *Sender)
+{
+	if(i != 0){
+		int type= block[i-1]->Tag / 100;
+		if(type == 4 || type == 6 || type==7||type==8){
+			clcounts--;
+		}
+		else if(type == 9){
+			clcounts++;
+		}
+
+		if(i == 1){
+			line->Height=0;
+		}
+		else if(line->Height != 1)
+		{
+
+			line->Height = abs(block[0]->Position->Y - block[i-2]->Position->Y);
+		}
+		delete block[i-1];
+		Reset();
+		i--;
+	}
+}
+//---------------------------------------------------------------------------
+
+
+
+
+void __fastcall TForm1::ElseClick(TObject *Sender)
+{
+	/*
+	block[i] = new TImage(this);
+	block[i]->Parent = ScrollBox1;
+	block[i]->Size->Width = 120;
+	block[i]->Size->Height = 49;
+	block[i]->Visible = true;
+	block[i]->OnMouseDown = BlockMouseDown;
+	block[i]->Tag = i+700;
+	block[i]->Position->X = block[No]->Position->X + block[No]->Width + 50;
+	block[i]->Position->Y = block[No]->Position->Y;
+	block[i]->WrapMode = trash2->WrapMode;
+	block[i]->MultiResBitmap->Items[0]->Bitmap->LoadFromFile("image//조건-elseif.png");
+
+	label[i] = new TLabel(this);
+	label[i]->Parent = block[i];
+	label[i]->Tag = block[i]->Tag;
+	label[i]->WordWrap = true;
+
+
+	lines[l] = new TLine(this);
+	lines[l]->Parent = ScrollBox1;
+	lines[l]->Width = 1;
+	lines[l]->Height = 1000;
+	lines[l]->Position->X = block[i]->Position->X + block[i]->Width/2;
+	lines[l]->Position->Y = 0;
+	lines[l]->Fill->Color = trash3->Fill->Color;
+	lines[l]->OnMouseDown = LineMouseDown;
+
+	l++;
+	i++;
+	Reset();
+	*/
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::SpeedButton3Click(TObject *Sender)
+{
+	TOpenDialog* dlg = new TOpenDialog(this);
+	if(dlg->Execute())
+	{
+		TFileStream* fs = new TFileStream(dlg->FileName,fmOpenRead|fmShareCompat);
+	}
+}
+//---------------------------------------------------------------------------
+
+
+
+void __fastcall TForm1::ScrollBox1MouseMove(TObject *Sender, TShiftState Shift, float X,
+          float Y)
+{
+	if(linetag>=0 && lineselect[linetag] == true)
+	{
+		lines[linetag]->Position->X = X;
+    }
+}
+//---------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+void __fastcall TForm1::Button3Click(TObject *Sender)
+{
+	/*TSaveDialog* dlg = new TSaveDialog(this);
+	if(dlg->Execute())
+	{
+		Memo1->Lines->SaveToFile(dlg->FileName);
+	}
+	delete dlg;*/
+
+
+	if(i > 0){
+	for(int x = 0; x < i; x++){
+		block[x]->Visible=false;
+		block[x] = new TImage(this);
+	} }
+	line->Height=0;
+	i=0;
+	clcounts=0;
+
+}
+//---------------------------------------------------------------------------
+
+
+
+void __fastcall TForm1::Button4Click(TObject *Sender)
+{
+	TSaveDialog* dlg = new TSaveDialog(this);
+	if(dlg->Execute())
+	{
+		Memo1->Lines->SaveToFile(dlg->FileName);
+	}
+	delete dlg;
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::Button5Click(TObject *Sender)
+{
+	TSaveDialog* dlg = new TSaveDialog(this);
+	dlg->DefaultExt = "uf";
+	if(dlg->Execute())
+	{
+		ListBox1->Items->SaveToFile(dlg->FileName);
+	}
+	delete dlg;
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::Button6Click(TObject *Sender)
+{
+
+	line->Size->Width = 1;
+	TOpenDialog* dlg = new TOpenDialog(this);
+	dlg->DefaultExt = "uf";
+	if(dlg->Execute())
+	{
+		ListBox1->Items->LoadFromFile(dlg->FileName);
+	}
+	delete dlg;
+	AnsiString blockproperties[2] = {},blockproperty;
+	if(i > 0){
+	for(int x = 0; x < i; x++){
+		block[x]->Visible=false;
+	}
+	}
+	i = ListBox1->Count;
+	for(int k=0;k<=ListBox1->Count-1;k++)
+	{
+		blockproperty = ListBox1->ItemByIndex(k)->Text;
+		if(blockproperty.Pos(",") == 0){
+			blockproperties[0] = blockproperty;
+		}else{
+		blockproperties[0] = blockproperty.SubString(1,blockproperty.Pos(",")-1);
+
+		blockproperty = blockproperty.Delete(1,blockproperty.Pos(","));
+		blockproperties[1] = blockproperty;
+		}
+
+		block[k] = new TImage(this);
+		block[k]->Parent = ScrollBox1;
+		block[k]->MultiResBitmap->Items[0]->Bitmap->LoadFromFile("image//"+blockproperties[0]+".png");
+		block[k]->Size->Width = 120;
+		block[k]->Size->Height = 49;
+		block[k]->Visible = true;
+		block[k]->OnMouseDown = BlockMouseDown;
+		block[k]->Tag = k+(100 * blockproperties[0]);
+		block[k]->Position->X = 30;
+		block[k]->Position->Y = 30 + k*(Example1->Height+30);
+		block[k]->WrapMode = trash2->WrapMode;
+
+        line->Position->X = block[0]->Position->X + block[0]->Size->Width/2;
+		line->Position->Y = block[0]->Position->Y;
+		label[k] = new TLabel(this);
+		label[k]->Parent = block[k];
+		label[k]->Tag = block[k]->Tag;
+		label[k]->WordWrap = true;
+		label[k]->Text = blockproperties[1];
+		label[k]->Align = 11;
+		label[k]->Width = label[k]->Canvas->TextWidth(label[k]->Text);
+		line->Size->Height = block[k]->Position->Y - block[0]->Position->Y;
+	}
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::Button7Click(TObject *Sender)
+{
+	ListBox2->Visible=false;
+	if(IdTCPClient1->Connected()){
+		IdTCPClient1->Disconnect();
+	}
+	IdTCPClient1->Connect();
+	str_filename="C:\\Temp\\temp.cpp";
+	if(ComboBox2->ItemIndex == 0){
+	for(int j = 0; j < Memo1->Lines->Count; j++){
+		if(Memo1->Lines->ToStringArray()[j].Pos("cin") > 0){
+			ShowMessage("샌드박스 모드에선 입력을 받을 수 없습니다!");
+			return;
+		}
+	}
+	}else{
+		if(id != ""){
+			ShowMessage("문제는 로그인 후 풀 수 있습니다!");
+			return;
+		}
+	}
+	Memo1->Lines->SaveToFile(str_filename);
+	TFileStream *fs = new TFileStream(str_filename, fmOpenRead|fmShareCompat);
+	AnsiString str = "#SEND##FILEDOWNSTART#" + IntToStr(fs->Size)+"#"+str_filename+ "#"+ComboBox2->ItemIndex;
+	delete fs;
+	try{
+	IdTCPClient1->Socket->Write(str.Length());
+	IdTCPClient1->Socket->Write(str);
+	ListBox2->Items->Clear();
+	//Button7->Enabled=false;
+	}catch(Exception &e){
+		ShowMessage("서버와 연결하지 못했습니다.");
+	}
+}
+//---------------------------------------------------------------------------
+
+
+void __fastcall TForm1::Timer1Timer(TObject *Sender)
+{
+    	if(Form1->IdTCPClient1->Connected())
+	{
+		if(!Form1->IdTCPClient1->IOHandler->InputBufferIsEmpty())
+		{
+	int bufsize = IdTCPClient1->IOHandler->InputBuffer->Size;
+	String str = IdTCPClient1->IOHandler->ReadString(bufsize,IndyTextEncoding(949));
+   TIdIOHandlerSocket *Socket = IdTCPClient1->Socket;
+   if(str.Pos("#ASKQ#") > 0){
+		str.Delete(1,6);
+		ShowMessage(str);
+			IdTCPClient1->Disconnect();
+
+   }
+   if(str.Pos("#CORR#")){
+	ShowMessage(str.Delete(1,6)+"번 문제를 풀었습니다!");
+	IdTCPClient1->Disconnect();
+	Button7->Enabled=true;
+   }
+   if(str.Pos("#QUESTION#") > 0){
+   //ShowMessage(str);
+   str.Delete(1,10);
+   ComboBox2->Items->Clear();
+   ComboBox2->Items->Add("샌드박스");
+	do{
+		ComboBox2->Items->Add(str.SubString(1,str.Pos("#")-1));
+		str.Delete(1,str.Pos("#"));
+	}while(str != "");
+	IdTCPClient1->Disconnect();
+	ComboBox2->ItemIndex=0;
+   }
+   if(str.Pos("#FAIL#")){
+	ShowMessage(str.Delete(1,6)+"번 문제를 틀렸습니다..");
+	IdTCPClient1->Disconnect();
+	Button7->Enabled=true;
+   }
+   if(str.Pos("#ERROR#") > 0){
+	ShowMessage("서버와 연결이 끊어졌습니다. \n 서버의 메시지: "+str.Delete(1,7));
+	IdTCPClient1->Disconnect();
+   }
+   if(str.Pos("#MYINFO#") > 0){
+	String s = str.Delete(1,8);
+	if(s != ""){
+		Label11->Text="푼 문제: "+s;
+		IdTCPClient1->Disconnect();
+		Button7->Enabled=true;
+		}else{
+            Label11->Text="푼 문제가 없네요.";
+		}
+   }
+   if(str.Pos("#LOGIN#") > 0){
+	str.Delete(1,7);
+	if(str == "SUCCESS"){
+        Panel2->Visible=false;
+		Label10->Visible=false;
+		Edit2->Visible=false;
+		Edit5->Visible=false;
+		Label13->Visible=false;
+		Button10->Visible=false;
+		Label11->Visible=false;
+		Button9->Text="내 정보";
+		IdTCPClient1->Disconnect();
+		id = Edit2->Text;
+	}else{
+		ShowMessage("로그인 실패: 아이디와 비밀번호를 확인하세요.");
+		IdTCPClient1->Disconnect();
+    }
+   }
+   if(str.Pos("#RESULT#") > 0){
+   //ShowMessage(str);
+   ListBox2->Visible=true;
+	str.Delete(1,8);
+	do{
+	String st= str.SubString(1,str.Pos("#")-1);
+	ListBox2->Items->Add(st);
+	str.Delete(1,str.Pos("#"));
+	if(str !=""){
+		str.Delete(1,8);
+	}
+	//ShowMessage(str+" st: "+st);
+	}while(str!="");
+	Button7->Enabled=true;
+   }
+if(str.Pos("#DOWN#") > 0)
+{
+	//파일 전송이 다 끝나면 완료한다.
+	str = str.Delete(1,6);
+    int idx = str.Pos("#FILEDOWNLOADED#");
+	if(idx <= 0) return;
+
+    str.Delete(idx, 16);
+	idx = str.Pos("#");
+	AnsiString str_filename = str.SubString(1, idx-1);
+    str.Delete(1, idx);
+    idx = str.Pos("#");
+	AnsiString str_downloadedsize = str.SubString(1, idx-1);
+	int downloadedsize = StrToInt(str_downloadedsize);
+
+	TFileStream* fs = new TFileStream(str_filename, fmOpenRead|fmShareCompat);
+	int totalsize = fs->Size;
+	fs->Position = downloadedsize;
+	int i;
+
+    //전송할 파일 사이즈가 1024byte(1K) 보다 크면 1K 만큼의 파일을 읽는다.
+	if((totalsize-downloadedsize) > (SENDSIZE*1024))
+	{
+		str_data.SetLength(SENDSIZE*1024);
+		fs->Read(str_data.c_str(), SENDSIZE*1024);
+	}
+	else    //전송할 파일 사이즈가 1K 보다 작으면 남은 파일사이즈 전체를 읽는다.
+	{
+		str_data.SetLength(totalsize-downloadedsize);
+		fs->Read(str_data.c_str(), totalsize-downloadedsize);
+	}
+    delete fs;
+
+	//파일을 전송한다.
+
+	UnicodeString str= "#SEND##FILEDOWNLOADING#"+ IntToStr(str_data.Length()) + "#";
+	str = str + str_data;
+	IdTCPClient1->Socket->Write(str.Length());
+	Socket->WriteLn(str,IndyTextEncoding(949));
+
+			if((totalsize-downloadedsize) <= (SENDSIZE*1024)){
+				str_buf = "";
+				//fs == NULL;
+                str_filename = "";
+				str_savefilename = "";
+                totalsize = 0;
+				receivesize = 0;
+				buffersize = 0;
+				//IdTCPClient1->Disconnect();
+			}
+
+			}
+			}
+
+			}
+
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::Button8Click(TObject *Sender)
+{
+	if(ComboBox2->ItemIndex > 0){
+		if(IdTCPClient1->Connected()){
+			IdTCPClient1->Disconnect();
+		}
+		try{
+			IdTCPClient1->Connect();
+			UnicodeString str= "#ASKQ#"+IntToStr(ComboBox2->ItemIndex);
+			IdTCPClient1->Socket->Write(str.Length());
+			Form1->IdTCPClient1->Socket->WriteLn(str);
+        }catch(Exception &e){
+		ShowMessage("서버와 연결하지 못했습니다.");
+		}
+	}
+}
+//---------------------------------------------------------------------------
+
+
+
+void __fastcall TForm1::Button9Click(TObject *Sender)
+{
+	if(Button9->Text=="로그인"){
+		Panel2->Visible=true;
+		Label10->Visible=true;
+		Edit2->Visible=true;
+		Edit5->Visible=true;
+		Label13->Visible=true;
+		Button10->Visible=true;
+		Label11->Visible=false;
+		Button9->Text="취소";
+	}else if(Button9->Text == "취소"){
+		if(Edit2->Visible){
+			Button9->Text="로그인";
+		}else{
+			Button9->Text="내 정보";
+        }
+
+		Panel2->Visible=false;
+		Label10->Visible=false;
+		Edit2->Visible=false;
+		Edit5->Visible=false;
+		Label13->Visible=false;
+		Button10->Visible=false;
+		Label11->Visible=false;
+
+	}else if(Button9->Text=="내 정보"){
+		Panel2->Visible=true;
+		Label10->Visible=false;
+		Edit2->Visible=false;
+		Edit5->Visible=false;
+		Label13->Visible=false;
+		Button10->Visible=true;
+		Label11->Visible=true;
+		Button10->Text="로그아웃";
+		Button9->Text="취소";
+		if(IdTCPClient1->Connected()){
+			IdTCPClient1->Disconnect();
+		}
+		IdTCPClient1->Connect();
+		String str = "#MYINFO#"+id;
+		IdTCPClient1->Socket->Write(str.Length());
+		IdTCPClient1->Socket->Write(str);
+	}
+}
+//---------------------------------------------------------------------------
+
+
+void __fastcall TForm1::FormCreate(TObject *Sender)
+{
+	Panel2->Visible=false;
+		Label10->Visible=false;
+		Edit2->Visible=false;
+		Edit5->Visible=false;
+		Label13->Visible=false;
+		Button10->Visible=false;
+		Label11->Visible=false;
+		Button9->Text="로그인";
+		Button10->Text="로그인";
+			String str = "#QUESTION#";
+	if(IdTCPClient1->Connected()){
+		IdTCPClient1->Disconnect();
+	}
+	try{
+		IdTCPClient1->Connect();
+		IdTCPClient1->Socket->Write(str.Length());
+		IdTCPClient1->Socket->Write(str);
+	}catch(Exception &e){
+		ShowMessage("서버와 연결하지 못했습니다.");
+	}
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::Button10Click(TObject *Sender)
+{
+	try{
+		if(Button10->Text=="로그인"){
+		String str = "#LOGIN#"+Edit2->Text+"#"+Edit5->Text;
+		if(IdTCPClient1->Connected()){
+				IdTCPClient1->Disconnect();
+			}
+			IdTCPClient1->Connect();
+		IdTCPClient1->Socket->Write(str.Length());
+		IdTCPClient1->Socket->Write(str);
+		}else{
+			Panel2->Visible=false;
+			Label10->Visible=false;
+			Edit2->Visible=false;
+			Edit5->Visible=false;
+			Label13->Visible=false;
+			Button10->Visible=false;
+			Label11->Visible=false;
+			Button9->Text="로그인";
+			Button10->Text="로그인";
+		}
+    }catch(Exception &e){
+		ShowMessage("서버와 연결하지 못했습니다.");
+	}
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::ComboBox2Click(TObject *Sender)
+{
+	String str = "#QUESTION#";
+	if(IdTCPClient1->Connected()){
+		IdTCPClient1->Disconnect();
+	}
+	try{
+		IdTCPClient1->Connect();
+		IdTCPClient1->Socket->Write(str.Length());
+		IdTCPClient1->Socket->Write(str);
+	}catch(Exception &e){
+		ShowMessage("서버와 연결하지 못했습니다.");
+	}
+}
+//---------------------------------------------------------------------------
+
+
+
+void __fastcall TForm1::Edit1KeyDown(TObject *Sender, WORD &Key, System::WideChar &KeyChar,
+          TShiftState Shift)
+{
+	if(Key == 13)
+	{
+        ListBox1->ItemByIndex(No)->Text = ListBox1->ItemByIndex(No)->Text.Delete(ListBox1->ItemByIndex(No)->Text.Pos(","),ListBox1->ItemByIndex(No)->Text.Length()-ListBox1->ItemByIndex(No)->Text.Pos(",")+1);
+		ListBox1->ItemByIndex(No)->Text = ListBox1->ItemByIndex(No)->Text + "," + Edit1->Text;
+		label[No]->Text = Edit1->Text;
+		label[No]->Align = 11;//trash->Align;
+		label[No]->Width = label[No]->Canvas->TextWidth(label[No]->Text);
+        Reset();
+	}
+
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::ScrollBox1Click(TObject *Sender)
+{
+	Reset();
+}
+//---------------------------------------------------------------------------
